@@ -1,3 +1,3 @@
-module github.com/Lugo05/util
+module github.com/Lugo05/gds
 
 go 1.14

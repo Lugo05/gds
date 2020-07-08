@@ -7,3 +7,7 @@ import (
 func TestMapToDocument(t *testing.T) {
 
 }
+
+func TestDocumentClone(t *testing.T) {
+
+}

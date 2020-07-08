@@ -4,12 +4,11 @@ import (
 	"fmt"
 
 	. "github.com/Lugo05/gds/collection"
+	"github.com/Lugo05/gds/iterator"
 )
 
 type Set struct {
-	data     map[interface{}]int
-	hasNext  bool
-	iterator []interface{}
+	data map[interface{}]int
 }
 
 func (set *Set) Add(elems ...interface{}) Collection {
@@ -57,25 +56,12 @@ func (set *Set) ToArray() []interface{} {
 	return array
 }
 
-func (set *Set) Next() interface{} {
-	if len(set.iterator) == 0 {
-		if set.hasNext {
-			set.iterator = set.ToArray()
-		} else {
-			set.hasNext = true
-			return nil
-		}
+func (set *Set) GetIterator() *iterator.Iterator {
+	it := iterator.New()
+	for k, _ := range set.data {
+		it.Append(k)
 	}
-	size := len(set.iterator)
-	if size == 0 {
-		return nil
-	}
-	val := set.iterator[0]
-	set.iterator = set.iterator[1:size]
-	if size-1 == 0 {
-		set.hasNext = false
-	}
-	return val
+	return it
 }
 
 func (set *Set) Equals(collection Collection) bool {

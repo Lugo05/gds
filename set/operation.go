@@ -3,8 +3,6 @@ package set
 func New() *Set {
 	set := Set{}
 	set.data = make(map[interface{}]int)
-	set.iterator = []interface{}{}
-	set.hasNext = true
 	return &set
 }
 

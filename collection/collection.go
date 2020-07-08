@@ -1,5 +1,6 @@
 package collection
 
+//Abstraction of all Data Structures methods
 type Collection interface {
 	Add(...interface{}) Collection
 	Remove(interface{}) Collection
@@ -8,8 +9,6 @@ type Collection interface {
 	Contains(interface{}) bool
 	IsEmpty() bool
 	Size() int
-	ToArray() []interface{}
-	Next() interface{}
 	Equals(Collection) bool
 }
 

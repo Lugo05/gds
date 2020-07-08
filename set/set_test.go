@@ -44,15 +44,16 @@ func TestSetToArray(t *testing.T) {
 	}
 }
 
-func TestSetNext(t *testing.T) {
+func TestSetIterator(t *testing.T) {
 	set := set.New()
 	set.Add(1, 2, 3, 4, 5, 6)
 	expected := 12
 	got := 0
-	for next := set.Next(); next != nil; next = set.Next() {
+	it := set.GetIterator()
+	for v := it.Begin(); v != nil; v = it.Next() {
 		got++
 	}
-	for next := set.Next(); next != nil; next = set.Next() {
+	for v := it.Begin(); v != nil; v = it.Next() {
 		got++
 	}
 	if got != expected {

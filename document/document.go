@@ -2,25 +2,42 @@ package document
 
 import (
 	"fmt"
+	"reflect"
+	"sort"
 	"strings"
 
 	. "github.com/Lugo05/gds/collection"
+	"github.com/Lugo05/gds/iterator"
+	. "github.com/Lugo05/gds/types"
 )
 
+/*
+Data structure similar to Map.
+We avoid assertion every level.
+Manipulation is easier.
+*/
 type Document struct {
 	data map[string]interface{}
 }
 
+/*We define which types are assignable. It helps to encapsulate different variations of types in just one.*/
+var allowedTypes = []Type{
+	Int, UInt, Float, Complex, String, Bool,
+	ArrayBool, ArrayInt, ArrayUInt, ArrayFloat,
+	ArrayComplex, ArrayString, ArrayInterface, &Document{},
+}
+
+//
 func (document *Document) String() string {
 
 	stringValue := "(*document.Document) {\n"
 	for k, v := range document.data {
-		switch document.Type(k) {
-		case "*document.Document":
+		t := document.Type(k)
+		if strings.HasSuffix(t, "Document") {
 			aux := document.Child(k).String()
 			aux = strings.ReplaceAll(aux, "\n", "\n\t")
 			stringValue += fmt.Sprintf("\t'%v': %v\n", k, aux)
-		default:
+		} else {
 			stringValue += fmt.Sprintf("\t'%v': (%T) %v\n", k, v, v)
 		}
 	}
@@ -36,32 +53,15 @@ func (document *Document) Add(data ...interface{}) Collection {
 	for i := 0; i < len(data); i += 2 {
 		key := fmt.Sprintf("%v", data[0])
 		val := data[1]
-
-		if value, valid := isInt(val); valid {
-			document.data[key] = value
-		} else if value, valid := isUInt(val); valid {
-			document.data[key] = value
-		} else if value, valid := isFloat(val); valid {
-			document.data[key] = value
-		} else if value, valid := isComplex(val); valid {
-			document.data[key] = value
-		} else if value, valid := isString(val); valid {
-			document.data[key] = value
-		} else if value, valid := isBool(val); valid {
-			document.data[key] = value
-		} else if value, valid := isArrayString(val); valid {
-			document.data[key] = value
-		} else if value, valid := isArrayInt(val); valid {
-			document.data[key] = value
-		} else if value, valid := isArrayFloat(val); valid {
-			document.data[key] = value
-		} else if value, valid := isArrayComplex(val); valid {
-			document.data[key] = value
-		} else if value, valid := isArrayInterface(val); valid {
-			document.data[key] = value
-		} else if value, valid := isDocument(val); valid {
-			document.data[key] = value
-		} else {
+		found := false
+		for _, allTyp := range allowedTypes {
+			if value, valid := allTyp.IsAssignable(val); valid {
+				document.data[key] = value
+				found = true
+				break
+			}
+		}
+		if !found {
 			document.data[key] = val
 		}
 	}
@@ -99,15 +99,25 @@ func (document *Document) Size() int {
 	return len(document.data)
 }
 
-func (document *Document) ToArray() []interface{} {
-	return nil
-}
-
-func (document *Document) Next() interface{} {
-	return nil
-}
-
 func (document *Document) Equals(c Collection) bool {
+	docComp, correct := c.(*Document)
+	if !correct {
+		return false
+	}
+	for k, v := range document.data {
+		if !docComp.Contains(k) {
+			return false
+		} else if docComp.Type(k) != document.Type(k) {
+			return false
+		} else if document.Type(k) == "*document.Document" {
+			aux := document.Child(k).Equals(docComp.Child(k))
+			if !aux {
+				return aux
+			}
+		} else if !reflect.DeepEqual(v, docComp.Value(k)) {
+			return false
+		}
+	}
 	return true
 }
 
@@ -119,7 +129,11 @@ func (document *Document) Change(key string, newValue interface{}) *Document {
 
 func (document *Document) Type(key string) string {
 	if document.Contains(key) {
-		return fmt.Sprintf("%T", document.data[key])
+		t := fmt.Sprintf("%T", document.data[key])
+		if strings.HasSuffix(t, "Document") {
+			return "*document.Document"
+		}
+		return t
 	}
 	return ""
 }
@@ -227,4 +241,47 @@ func (document *Document) ArrayBool(key string) []bool {
 		return document.data[key].([]bool)
 	}
 	return nil
+}
+
+func (document *Document) ToArray() []interface{} {
+	array := make([]interface{}, document.Size())
+	keys := make([]string, document.Size())
+	i := 0
+	for k, _ := range document.data {
+		keys[i] = k
+		i++
+	}
+	sort.Strings(keys)
+	for i = 0; i < len(keys); i++ {
+		array[i] = []interface{}{keys[i], document.Value(keys[i])}
+	}
+	return array
+}
+
+func (document *Document) GetIterator() *iterator.Iterator {
+	it := iterator.New()
+	for k, _ := range document.data {
+		it.Append(k)
+	}
+	return it
+}
+
+func (document *Document) IsAssignable(val interface{}) (interface{}, bool) {
+	switch t := fmt.Sprintf("%T", val); t {
+	case "map[string]interface {}":
+		document := New()
+		aux := val.(map[string]interface{})
+		for k, v := range aux {
+			document.Add(k, v)
+		}
+		return document, true
+	case "Document":
+		aux := val.(Document)
+		return &aux, true
+	case "*Document":
+		aux := val.(*Document)
+		return aux, true
+	default:
+		return nil, false
+	}
 }

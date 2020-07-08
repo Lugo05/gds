@@ -13,16 +13,23 @@ func New() *Document {
 }
 
 func Clone(d *Document) *Document {
-	document := Document{}
-	return &document
+	document := New()
+	for k, v := range d.data {
+		if d.Type(k) == "*document.Document" {
+			document.Add(k, Clone(d.Child(k)))
+		} else {
+			document.Add(k, v)
+		}
+	}
+	return document
 }
 
 func MapToDocument(data map[string]interface{}) (*Document, error) {
-	document := Document{}
+	document := New()
 	for key, value := range data {
 		document.Add(key, value)
 	}
-	return &document, nil
+	return document, nil
 }
 
 func getDataFile(path string) ([]byte, error) {
